@@ -23,26 +23,29 @@ fetch("agricultural_land.geojson")
 
       if (geometry.type === "MultiPolygon") {
         geometry.coordinates.forEach(polygon => {
-          polygon.forEach(ring => {
-            const latlngs = ring.map(([x, y]) => {
+          // Each polygon contains one outer ring and 0 or more inner rings (holes)
+          const latlngPolygon = polygon.map(ring => {
+            return ring.map(([x, y]) => {
               const [lon, lat] = proj4(utm, wgs84, [x, y]);
               return [lat, lon];
             });
-
-            // Track bounds for auto-zoom
-            allBounds.push(...latlngs);
-
-            // Draw polygon
-            L.polygon(latlngs, {
-              color: "green",
-              weight: 2,
-              fillOpacity: 0.4
-            }).addTo(map).bindPopup(`
-              <b>OBJECTID:</b> ${feature.properties.OBJECTID}<br>
-  <b>LU_TYPE:</b> ${feature.properties.LU_TYPE}<br>
-  <b>TIME_ST:</b> ${feature.properties.TIME_ST}
-              `);
           });
+
+          // Add all outer ring points to bounds
+          if (latlngPolygon.length > 0) {
+            allBounds.push(...latlngPolygon[0]);
+          }
+
+          // Draw polygon with potential holes
+          L.polygon(latlngPolygon, {
+            color: "green",
+            weight: 2,
+            fillOpacity: 0.4
+          }).addTo(map).bindPopup(`
+            <b>OBJECTID:</b> ${feature.properties.OBJECTID}<br>
+            <b>LU_TYPE:</b> ${feature.properties.LU_TYPE}<br>
+            <b>TIME_ST:</b> ${feature.properties.TIME_ST}
+          `);
         });
       }
     });
