@@ -2,24 +2,18 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>3D Buildings (Reprojected)</title>
+  <title>Mapbox UTM to WGS84 Visualization</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #map { height: 100vh; width: 100%; }
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-
-  <!-- Mapbox GL JS v2.15.0 -->
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.8.0/dist/proj4.js"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-
-  <!-- Proj4 for UTM to WGS84 conversion -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
-
-  <!-- Your Mapbox access token and logic -->
   <script src="map.js"></script>
 </body>
 </html>
