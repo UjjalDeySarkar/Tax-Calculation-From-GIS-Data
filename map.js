@@ -1,86 +1,139 @@
-// Define projections using proj4
+mapboxgl.accessToken = 'pk.eyJ1IjoiYm9zaXJhIiwiYSI6ImNtY3V3Y3JjZTA0Yncyd3B4cXR4YWEwamwifQ.yWciEYaITqTBPhlgAeE9Bg';
+
+// Define projections
 proj4.defs("EPSG:32645", "+proj=utm +zone=45 +datum=WGS84 +units=m +no_defs");
 const utm = "EPSG:32645";
 const wgs84 = "EPSG:4326";
 
-// Initialize Leaflet map (center will be adjusted dynamically)
-const map = L.map('map').setView([0, 0], 2); // Placeholder center
+// Start from full earth view
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/satellite-streets-v12',
+  center: [0, 20],
+  zoom: 0,
+  pitch: 0,
+  bearing: 0,
+  antialias: true
+});
 
-// Add OpenStreetMap tile layer
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+map.addControl(new mapboxgl.NavigationControl());
 
-/**
- * Loads a GeoJSON file, transforms coordinates if needed, and adds it to the map
- * @param {string} url - Path to the GeoJSON file
- * @param {string} color - Polygon border color
- * @param {function} popupContentFn - Function to generate popup HTML from properties
- */
-function showGeoJSONLayer(url, color, popupContentFn) {
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      const bounds = [];
-
-      data.features.forEach(feature => {
-        const geometry = feature.geometry;
-
-        if (geometry.type === "MultiPolygon") {
-          geometry.coordinates.forEach(polygon => {
-            const latlngPolygon = polygon.map(ring => {
-              return ring.map(coord => {
-                const [x, y] = coord; // Ignore z-value if present
-                const [lon, lat] = proj4(utm, wgs84, [x, y]);
-                return [lat, lon];
-              });
-            });
-
-            if (latlngPolygon.length > 0) {
-              bounds.push(...latlngPolygon[0]);
-            }
-
-            L.polygon(latlngPolygon, {
-              color: color,
-              weight: 2,
-              fillOpacity: 0.5
-            }).addTo(map).bindPopup(popupContentFn(feature.properties));
-          });
-        }
-      });
-
-      if (bounds.length > 0) {
-        map.fitBounds(bounds);
-      }
-    })
-    .catch(err => {
-      console.error(`Failed to load or process ${url}:`, err);
-    });
+function convertToLngLat(feature) {
+  const coords = feature.geometry.coordinates;
+  return coords.map(polygon =>
+    polygon.map(ring =>
+      ring.map(([x, y]) => {
+        const [lon, lat] = proj4(utm, wgs84, [x, y]);
+        return [lon, lat];
+      })
+    )
+  );
 }
 
-// Show Agricultural Land Layer
-showGeoJSONLayer(
-  "agricultural_land.geojson",
-  "green",
-  (props) => `
-    <b>OBJECTID:</b> ${props.OBJECTID}<br>
-    <b>LU_TYPE:</b> ${props.LU_TYPE}<br>
-    <b>TIME_ST:</b> ${props.TIME_ST}
-  `
-);
+function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = false) {
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const features = data.features.map(f => ({
+        type: "Feature",
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: convertToLngLat(f)
+        },
+        properties: f.properties
+      }));
 
-// Show Building Layer
-showGeoJSONLayer(
-  "Building.geojson",
-  "blue",
-  (props) => `
-    <b>Building ID:</b> ${props.BLD_ID}<br>
-    <b>Road:</b> ${props.ROAD_NAME}<br>
-    <b>Use:</b> ${props.LUSE_DET}<br>
-    <b>Locality:</b> ${props.LOCALITY}<br>
-    <b>Floors:</b> ${props.NO_OF_FLR}<br>
-    <b>Ward No:</b> ${props.WARD_NO}<br>
-    <b>Remarks:</b> ${props.REMARKS}
-  `
-);
+      const geojson = { type: "FeatureCollection", features };
+
+      map.addSource(layerId, {
+        type: "geojson",
+        data: geojson
+      });
+
+      map.addLayer({
+        id: layerId,
+        type: is3D ? "fill-extrusion" : "fill",
+        source: layerId,
+        paint: is3D
+          ? {
+              'fill-extrusion-color': color,
+              'fill-extrusion-height': ['get', 'height'],
+              'fill-extrusion-opacity': 0.9
+            }
+          : {
+              'fill-color': color,
+              'fill-opacity': 0.5,
+              'fill-outline-color': '#333'
+            }
+      });
+
+      map.on('click', layerId, e => {
+        const props = e.features[0].properties;
+        new mapboxgl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML(popupFn(props))
+          .addTo(map);
+      });
+
+      if (fitToBounds) {
+        const allCoords = features.flatMap(f => f.geometry.coordinates.flat(2));
+        const lats = allCoords.map(c => c[1]);
+        const lngs = allCoords.map(c => c[0]);
+        const bounds = [
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)]
+        ];
+        const center = [
+          (bounds[0][0] + bounds[1][0]) / 2,
+          (bounds[0][1] + bounds[1][1]) / 2
+        ];
+
+        // 🌍 Animate fly-in from globe to agri-land
+        setTimeout(() => {
+          map.flyTo({
+            center,
+            zoom: 17,
+            pitch: 60,
+            bearing: -20,
+            speed: 0.6,
+            curve: 1.8,
+            easing: t => t
+          });
+        }, 0);
+      }
+    })
+    .catch(err => console.error(`Error loading ${url}:`, err));
+}
+
+map.on('load', () => {
+  // Show agricultural land and trigger Earth-style fly-in
+  loadLayer(
+    'agricultural_land.geojson',
+    'agri-land',
+    '#00cc44',
+    props => `
+      <b>OBJECTID:</b> ${props.OBJECTID}<br>
+      <b>LU_TYPE:</b> ${props.LU_TYPE}<br>
+      <b>TIME_ST:</b> ${props.TIME_ST}
+    `,
+    true
+  );
+
+  // Show buildings with 3D extrusion
+  loadLayer(
+    'building.geojson',
+    'buildings',
+    '#0074D9',
+    props => `
+      <b>Building ID:</b> ${props.BLD_ID}<br>
+      <b>Road:</b> ${props.ROAD_NAME}<br>
+      <b>Use:</b> ${props.LUSE_DET}<br>
+      <b>Locality:</b> ${props.LOCALITY}<br>
+      <b>Floors:</b> ${props.NO_OF_FLR}<br>
+      <b>Ward No:</b> ${props.WARD_NO}<br>
+      <b>Remarks:</b> ${props.REMARKS}
+    `,
+    false,
+    true
+  );
+});
