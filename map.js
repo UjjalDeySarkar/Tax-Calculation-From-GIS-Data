@@ -1,3 +1,21 @@
+// After all layers have been loaded
+document.querySelectorAll('#layer-controls input[type=checkbox]').forEach(input => {
+  input.addEventListener('change', () => {
+    const layerId = input.getAttribute('data-layer');
+    const visibility = input.checked ? 'visible' : 'none';
+
+    // Only update layout if the layer exists
+    if (map.getLayer(layerId)) {
+      const type = map.getLayer(layerId).type;
+      // Make sure the layout property exists for that type
+      if (type === 'fill' || type === 'line' || type === 'fill-extrusion' || type === 'symbol') {
+        map.setLayoutProperty(layerId, 'visibility', visibility);
+      }
+    }
+  });
+});
+
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiYm9zaXJhIiwiYSI6ImNtY3V3Y3JjZTA0Yncyd3B4cXR4YWEwamwifQ.yWciEYaITqTBPhlgAeE9Bg';
 
 // Define projections
