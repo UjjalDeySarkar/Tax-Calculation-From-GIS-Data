@@ -105,7 +105,16 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
         source: layerId,
         paint: is3D
           ? {
-              'fill-extrusion-color': color,
+              'fill-extrusion-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'height'],
+              0, '#d4f0ff',
+              1, '#74b9ff',
+              2, '#1e90ff',
+              3, '#0652DD',
+              5, '#0c2461'
+            ],
               'fill-extrusion-height': ['get', 'height'],
               'fill-extrusion-opacity': 0.9
             }
@@ -204,7 +213,7 @@ map.on('load', () => {
   loadLayer(
     'Streem_Drainage_Canal.geojson',
     'water-features',
-    '#2980B9', // deep blue color
+    '#00FFFF', // deep blue color
     props => `
       <b>Water ID:</b> ${props.WN_ID}<br>
       <b>Type:</b> ${props.WN_TYPE}<br>
