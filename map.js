@@ -105,7 +105,16 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
         source: layerId,
         paint: is3D
           ? {
-              'fill-extrusion-color': color,
+              'fill-extrusion-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'height'],
+              0, '#d4f0ff',
+              1, '#74b9ff',
+              2, '#1e90ff',
+              3, '#0652DD',
+              5, '#0c2461'
+            ],
               'fill-extrusion-height': ['get', 'height'],
               'fill-extrusion-opacity': 0.9
             }
@@ -194,7 +203,7 @@ map.on('load', () => {
     '#00cc44',
     props => `
       <b>OBJECTID:</b> ${props.OBJECTID}<br>
-      <b>LU_TYPE:</b> ${props.LU_TYPE}<br>
+      <b>Land Type:</b> ${props.LU_TYPE}<br>
       <b>TIME_ST:</b> ${props.TIME_ST}
     `,
     true
@@ -204,7 +213,7 @@ map.on('load', () => {
   loadLayer(
     'Streem_Drainage_Canal.geojson',
     'water-features',
-    '#2980B9', // deep blue color
+    '#00FFFF', // deep blue color
     props => `
       <b>Water ID:</b> ${props.WN_ID}<br>
       <b>Type:</b> ${props.WN_TYPE}<br>
@@ -275,5 +284,17 @@ map.on('load', () => {
   //     <b>Time Stamp:</b> ${props.TIME_ST}
   //   `
   // );
+
+document.getElementById('applyFloorFilter').addEventListener('click', () => {
+  const minFloors = parseFloat(document.getElementById('minFloors').value);
+  const maxFloors = parseFloat(document.getElementById('maxFloors').value);
+
+  // Filter buildings based on NO_OF_FLR
+  map.setFilter('buildings', ['all',
+    ['>=', ['get', 'NO_OF_FLR'], minFloors],
+    ['<=', ['get', 'NO_OF_FLR'], maxFloors]
+  ]);
+});
+
 
 });
