@@ -5,7 +5,7 @@ proj4.defs("EPSG:32645", "+proj=utm +zone=45 +datum=WGS84 +units=m +no_defs");
 const utm = "EPSG:32645";
 const wgs84 = "EPSG:4326";
 
-// Start from full earth view
+// Create map
 const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -18,6 +18,7 @@ const map = new mapboxgl.Map({
 
 map.addControl(new mapboxgl.NavigationControl());
 
+// Coordinate conversion based on geometry type
 function convertToLngLat(feature) {
   const coords = feature.geometry.coordinates;
   switch (feature.geometry.type) {
@@ -31,6 +32,11 @@ function convertToLngLat(feature) {
         polygon.map(ring =>
           ring.map(([x, y]) => proj4(utm, wgs84, [x, y]))
         )
+      );
+    }
+    case "Polygon": {
+      return coords.map(ring =>
+        ring.map(([x, y]) => proj4(utm, wgs84, [x, y]))
       );
     }
     case "MultiLineString": {
@@ -47,7 +53,7 @@ function convertToLngLat(feature) {
   }
 }
 
-
+// Generic function to load and display a GeoJSON layer
 function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = false) {
   fetch(url)
     .then(res => res.json())
@@ -68,9 +74,16 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
         data: geojson
       });
 
+      const firstType = features[0].geometry.type;
+      const isLine = firstType.includes("Line");
+
       map.addLayer({
         id: layerId,
-        type: is3D ? "fill-extrusion" : "fill",
+        type: is3D
+          ? "fill-extrusion"
+          : isLine
+            ? "line"
+            : "fill",
         source: layerId,
         paint: is3D
           ? {
@@ -78,11 +91,16 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
               'fill-extrusion-height': ['get', 'height'],
               'fill-extrusion-opacity': 0.9
             }
-          : {
-              'fill-color': color,
-              'fill-opacity': 0.5,
-              'fill-outline-color': '#333'
-            }
+          : isLine
+            ? {
+                'line-color': color,
+                'line-width': 4
+              }
+            : {
+                'fill-color': color,
+                'fill-opacity': 0.5,
+                'fill-outline-color': '#333'
+              }
       });
 
       map.on('click', layerId, e => {
@@ -106,7 +124,6 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
           (bounds[0][1] + bounds[1][1]) / 2
         ];
 
-        // 🌍 Animate fly-in from globe to agri-land
         setTimeout(() => {
           map.flyTo({
             center,
@@ -123,8 +140,8 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
     .catch(err => console.error(`Error loading ${url}:`, err));
 }
 
+// Load layers
 map.on('load', () => {
-  // Show agricultural land and trigger Earth-style fly-in
   loadLayer(
     'agricultural_land.geojson',
     'agri-land',
@@ -137,7 +154,6 @@ map.on('load', () => {
     true
   );
 
-  // Show buildings with 3D extrusion
   loadLayer(
     'building.geojson',
     'buildings',
@@ -155,7 +171,20 @@ map.on('load', () => {
     true
   );
 
-   // Show roads as line layer
+  loadLayer(
+    'Community_Toilet.geojson',
+    'community-toilet',
+    '#FF5733',
+    props => `
+      <b>OBI ID:</b> ${props.OBI_ID}<br>
+      <b>Locality:</b> ${props.LOCALITY}<br>
+      <b>Remarks:</b> ${props.REMARKS}<br>
+      <b>WARD:</b> ${props.WARD_ID}<br>
+      <b>Commissioned:</b> ${props.COM_YEAR}<br>
+      <b>Time Stamp:</b> ${props.TIME_ST}
+    `
+  );
+
   loadLayer(
     'Right_of_Way.geojson',
     'roads',
@@ -166,9 +195,6 @@ map.on('load', () => {
       <b>Locality:</b> ${props.LOCALITY}<br>
       <b>Material:</b> ${props.CON_MAT}<br>
       <b>Time Stamp:</b> ${props.TIME_ST}
-    `,
-    false,
-    false // not 3D
+    `
   );
-
 });
