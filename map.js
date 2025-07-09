@@ -23,35 +23,35 @@ function convertToLngLat(feature) {
   const coords = feature.geometry.coordinates;
   switch (feature.geometry.type) {
     case "Point": {
-      const [x, y] = coords;
-      const [lon, lat] = proj4(utm, wgs84, [x, y]);
-      return [lon, lat];
+      const [x, y] = coords.slice(0, 2);
+      return proj4(utm, wgs84, [x, y]);
     }
     case "MultiPolygon": {
       return coords.map(polygon =>
         polygon.map(ring =>
-          ring.map(([x, y]) => proj4(utm, wgs84, [x, y]))
+          ring.map(coord => proj4(utm, wgs84, coord.slice(0, 2)))
         )
       );
     }
     case "Polygon": {
       return coords.map(ring =>
-        ring.map(([x, y]) => proj4(utm, wgs84, [x, y]))
+        ring.map(coord => proj4(utm, wgs84, coord.slice(0, 2)))
       );
     }
     case "MultiLineString": {
       return coords.map(line =>
-        line.map(([x, y]) => proj4(utm, wgs84, [x, y]))
+        line.map(coord => proj4(utm, wgs84, coord.slice(0, 2)))
       );
     }
     case "LineString": {
-      return coords.map(([x, y]) => proj4(utm, wgs84, [x, y]));
+      return coords.map(coord => proj4(utm, wgs84, coord.slice(0, 2)));
     }
     default:
       console.warn("Unsupported geometry type:", feature.geometry.type);
       return coords;
   }
 }
+
 
 // Generic function to load and display a GeoJSON layer
 function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = false) {
@@ -102,6 +102,34 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
                 'fill-outline-color': '#333'
               }
       });
+
+      // Add thick black border if it's a polygon (for Parcel)
+      if (!is3D && !isLine && layerId === 'parcels') {
+        // FILL Layer
+        map.addLayer({
+          id: layerId,
+          type: 'fill',
+          source: layerId,
+          paint: {
+            'fill-color': color,
+            'fill-opacity': 0.5,
+            'fill-outline-color': '#000000' // optional thin inner stroke
+          }
+        });
+
+        // BORDER Line Layer
+        map.addLayer({
+          id: `${layerId}-border`,
+          type: 'line',
+          source: layerId,
+          layout: {},
+          paint: {
+            'line-color': '#000000',
+            'line-width': 2
+          }
+        });
+
+      }
 
       map.on('click', layerId, e => {
         const props = e.features[0].properties;
@@ -154,6 +182,35 @@ map.on('load', () => {
     true
   );
 
+     // Show Parcel boundaries
+  loadLayer(
+    'Parcel.geojson',
+    'parcels',
+    '#d0de10',
+    props => `
+      <b>Parcel ID:</b> ${props.PCL_ID}<br>
+      <b>Location:</b> ${props.PCL_LOC}<br>
+      <b>Use:</b> ${props.LUSE_DET}<br>
+      <b>Area (m²):</b> ${props.PCL_AREA.toFixed(2)}<br>
+      <b>Remarks:</b> ${props.REMARKS}<br>
+      <b>Time Stamp:</b> ${props.TIME_ST}
+    `,
+    false // set to true if you want fly-to effect
+  );
+
+  loadLayer(
+    'Right_of_Way.geojson',
+    'roads',
+    '#FF0000',
+    props => `
+      <b>Road Name:</b> ${props.RD_NAME}<br>
+      <b>Length (m):</b> ${props.RD_LEN}<br>
+      <b>Locality:</b> ${props.LOCALITY}<br>
+      <b>Material:</b> ${props.CON_MAT}<br>
+      <b>Time Stamp:</b> ${props.TIME_ST}
+    `
+  );
+
   loadLayer(
     'building.geojson',
     'buildings',
@@ -185,16 +242,4 @@ map.on('load', () => {
     `
   );
 
-  loadLayer(
-    'Right_of_Way.geojson',
-    'roads',
-    '#FF0000',
-    props => `
-      <b>Road Name:</b> ${props.RD_NAME}<br>
-      <b>Length (m):</b> ${props.RD_LEN}<br>
-      <b>Locality:</b> ${props.LOCALITY}<br>
-      <b>Material:</b> ${props.CON_MAT}<br>
-      <b>Time Stamp:</b> ${props.TIME_ST}
-    `
-  );
 });
