@@ -203,7 +203,7 @@ map.on('load', () => {
     '#00cc44',
     props => `
       <b>OBJECTID:</b> ${props.OBJECTID}<br>
-      <b>LU_TYPE:</b> ${props.LU_TYPE}<br>
+      <b>Land Type:</b> ${props.LU_TYPE}<br>
       <b>TIME_ST:</b> ${props.TIME_ST}
     `,
     true
@@ -284,5 +284,17 @@ map.on('load', () => {
   //     <b>Time Stamp:</b> ${props.TIME_ST}
   //   `
   // );
+
+document.getElementById('applyFloorFilter').addEventListener('click', () => {
+  const minFloors = parseFloat(document.getElementById('minFloors').value);
+  const maxFloors = parseFloat(document.getElementById('maxFloors').value);
+
+  // Filter buildings based on NO_OF_FLR
+  map.setFilter('buildings', ['all',
+    ['>=', ['get', 'NO_OF_FLR'], minFloors],
+    ['<=', ['get', 'NO_OF_FLR'], maxFloors]
+  ]);
+});
+
 
 });
