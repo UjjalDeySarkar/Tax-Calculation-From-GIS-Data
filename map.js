@@ -182,11 +182,27 @@ map.on('load', () => {
     true
   );
 
+      // Add Stream / Drainage / Canal Layer
+  loadLayer(
+    'Streem_Drainage_Canal.geojson',
+    'water-features',
+    '#2980B9', // deep blue color
+    props => `
+      <b>Water ID:</b> ${props.WN_ID}<br>
+      <b>Type:</b> ${props.WN_TYPE}<br>
+      <b>Name:</b> ${props.WN_NAME}<br>
+      <b>Area (m²):</b> ${props.Shape_Area?.toFixed(2)}<br>
+      <b>Length (m):</b> ${props.Shape_Leng?.toFixed(2)}<br>
+      <b>Timestamp:</b> ${props.TIME_ST}
+    `,
+    false // fitToBounds
+  );
+
      // Show Parcel boundaries
   loadLayer(
     'Parcel.geojson',
     'parcels',
-    '#d0de10',
+    '#f5ed05',
     props => `
       <b>Parcel ID:</b> ${props.PCL_ID}<br>
       <b>Location:</b> ${props.PCL_LOC}<br>
@@ -228,18 +244,18 @@ map.on('load', () => {
     true
   );
 
-  loadLayer(
-    'Community_Toilet.geojson',
-    'community-toilet',
-    '#FF5733',
-    props => `
-      <b>OBI ID:</b> ${props.OBI_ID}<br>
-      <b>Locality:</b> ${props.LOCALITY}<br>
-      <b>Remarks:</b> ${props.REMARKS}<br>
-      <b>WARD:</b> ${props.WARD_ID}<br>
-      <b>Commissioned:</b> ${props.COM_YEAR}<br>
-      <b>Time Stamp:</b> ${props.TIME_ST}
-    `
-  );
+  // loadLayer(
+  //   'Community_Toilet.geojson',
+  //   'community-toilet',
+  //   '#FF5733',
+  //   props => `
+  //     <b>OBI ID:</b> ${props.OBI_ID}<br>
+  //     <b>Locality:</b> ${props.LOCALITY}<br>
+  //     <b>Remarks:</b> ${props.REMARKS}<br>
+  //     <b>WARD:</b> ${props.WARD_ID}<br>
+  //     <b>Commissioned:</b> ${props.COM_YEAR}<br>
+  //     <b>Time Stamp:</b> ${props.TIME_ST}
+  //   `
+  // );
 
 });
