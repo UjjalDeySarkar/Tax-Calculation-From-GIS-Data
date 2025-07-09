@@ -20,15 +20,33 @@ map.addControl(new mapboxgl.NavigationControl());
 
 function convertToLngLat(feature) {
   const coords = feature.geometry.coordinates;
-  return coords.map(polygon =>
-    polygon.map(ring =>
-      ring.map(([x, y]) => {
-        const [lon, lat] = proj4(utm, wgs84, [x, y]);
-        return [lon, lat];
-      })
-    )
-  );
+  switch (feature.geometry.type) {
+    case "Point": {
+      const [x, y] = coords;
+      const [lon, lat] = proj4(utm, wgs84, [x, y]);
+      return [lon, lat];
+    }
+    case "MultiPolygon": {
+      return coords.map(polygon =>
+        polygon.map(ring =>
+          ring.map(([x, y]) => proj4(utm, wgs84, [x, y]))
+        )
+      );
+    }
+    case "MultiLineString": {
+      return coords.map(line =>
+        line.map(([x, y]) => proj4(utm, wgs84, [x, y]))
+      );
+    }
+    case "LineString": {
+      return coords.map(([x, y]) => proj4(utm, wgs84, [x, y]));
+    }
+    default:
+      console.warn("Unsupported geometry type:", feature.geometry.type);
+      return coords;
+  }
 }
+
 
 function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = false) {
   fetch(url)
@@ -37,7 +55,7 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
       const features = data.features.map(f => ({
         type: "Feature",
         geometry: {
-          type: "MultiPolygon",
+          type: f.geometry.type,
           coordinates: convertToLngLat(f)
         },
         properties: f.properties
@@ -136,4 +154,21 @@ map.on('load', () => {
     false,
     true
   );
+
+   // Show roads as line layer
+  loadLayer(
+    'Right_of_Way.geojson',
+    'roads',
+    '#FF0000',
+    props => `
+      <b>Road Name:</b> ${props.RD_NAME}<br>
+      <b>Length (m):</b> ${props.RD_LEN}<br>
+      <b>Locality:</b> ${props.LOCALITY}<br>
+      <b>Material:</b> ${props.CON_MAT}<br>
+      <b>Time Stamp:</b> ${props.TIME_ST}
+    `,
+    false,
+    false // not 3D
+  );
+
 });
