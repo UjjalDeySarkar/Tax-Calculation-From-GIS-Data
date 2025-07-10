@@ -2,31 +2,89 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Mapbox UTM to WGS84 Visualization</title>
+  <title>Mapbox UTM to WGS84 Visualization with Sidebar Filter</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
     body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    #map { position: absolute; top: 0; bottom: 0; left: 0; right: 300px; }
+
+    #info-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background-color: white;
+      overflow-y: auto;
+      border-left: 1px solid #ccc;
+      padding: 10px;
+      font-family: sans-serif;
+      font-size: 14px;
+      z-index: 5;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    }
+
+    #layer-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 10px;
+      z-index: 1;
+      font-family: sans-serif;
+      font-size: 14px;
+      border-radius: 5px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.2);
+    }
+
+    #feature-filter, #filtered-results {
+      margin-bottom: 20px;
+    }
+
+    #results-list {
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+
+    hr { margin: 15px 0; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div id="layer-controls" style="position: absolute; top: 10px; left: 10px; background: white; padding: 10px; z-index: 1; font-family: sans-serif; font-size: 14px; border-radius: 5px; box-shadow: 0 0 4px rgba(0,0,0,0.2);">
-  <label><input type="checkbox" data-layer="agri-land" checked> Agricultural Land</label><br>
-  <label><input type="checkbox" data-layer="water-features" checked> Stream / Canal</label><br>
-  <label><input type="checkbox" data-layer="parcels" checked> Parcels</label><br>
-  <label><input type="checkbox" data-layer="parcels-border" checked> Parcel Borders</label><br>
-  <label><input type="checkbox" data-layer="roads" checked> Roads</label><br>
-  <label><input type="checkbox" data-layer="buildings" checked> Buildings</label><br>
-</div>
-<div id="floor-filter" style="position: absolute; top: 10px; right: 10px; background: white; padding: 10px; z-index: 1; border-radius: 5px; font-family: sans-serif; box-shadow: 0 0 4px rgba(0,0,0,0.3);">
-  <label><b>Filter Buildings by No. of Floors</b></label><br>
-  Min Floors: <input type="number" id="minFloors" value="0" style="width: 50px;">
-  Max Floors: <input type="number" id="maxFloors" value="10" style="width: 50px;">
-  <button id="applyFloorFilter">Apply</button>
-</div>
 
+  <div id="layer-controls">
+    <label><input type="checkbox" data-layer="agri-land" checked> Agricultural Land</label><br>
+    <label><input type="checkbox" data-layer="water-features" checked> Stream / Canal</label><br>
+    <label><input type="checkbox" data-layer="parcels" checked> Parcels</label><br>
+    <label><input type="checkbox" data-layer="parcels-border" checked> Parcel Borders</label><br>
+    <label><input type="checkbox" data-layer="roads" checked> Roads</label><br>
+    <label><input type="checkbox" data-layer="buildings" checked> Buildings</label><br>
+  </div>
+
+  <div id="info-panel">
+    <div id="feature-filter">
+      <h3>Filter Buildings</h3>
+      <label>Min Floors: <input type="number" id="filterMinFloors" value="0" style="width: 50px;"></label><br>
+      <label>Max Floors: <input type="number" id="filterMaxFloors" value="10" style="width: 50px;"></label><br>
+      <button id="applyBuildingFilter">Apply Filter</button>
+    </div>
+
+    <hr>
+
+    <div id="filtered-results">
+      <h3>Matching Buildings</h3>
+      <div id="results-list">Apply filter to see results.</div>
+    </div>
+
+    <hr>
+
+    <div id="clicked-feature">
+      <h3>Clicked Feature Info</h3>
+      <div id="clicked-info">Click a map feature to view details.</div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.8.0/dist/proj4.js"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
