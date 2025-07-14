@@ -2,88 +2,234 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Mapbox UTM to WGS84 Visualization with Sidebar Filter</title>
+  <title>Enterprise GIS Tax Calculation</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet" />
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
-    body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; left: 0; right: 300px; }
-
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Roboto', Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+    #header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      background: #263238;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+    #map {
+      position: absolute;
+      top: 56px;
+      bottom: 0;
+      left: 0;
+      right: 340px;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.06);
+    }
     #info-panel {
       position: absolute;
-      top: 0;
+      top: 56px;
       right: 0;
-      width: 300px;
-      height: 100%;
-      background-color: white;
+      width: 340px;
+      height: calc(100% - 56px);
+      background: #fff;
       overflow-y: auto;
-      border-left: 1px solid #ccc;
-      padding: 10px;
-      font-family: sans-serif;
-      font-size: 14px;
+      border-left: 1px solid #e0e0e0;
+      padding: 24px 20px;
+      font-size: 15px;
       z-index: 5;
-      box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+      box-shadow: -2px 0 8px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
     }
-
     #layer-controls {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 10px;
-      z-index: 1;
-      font-family: sans-serif;
-      font-size: 14px;
-      border-radius: 5px;
-      box-shadow: 0 0 4px rgba(0,0,0,0.2);
+      top: 70px;
+      left: 24px;
+      background: #fff;
+      padding: 18px 20px;
+      z-index: 6;
+      font-size: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      border: 1px solid #e0e0e0;
+      min-width: 220px;
     }
-
-    #feature-filter, #filtered-results {
-      margin-bottom: 20px;
+    #layer-controls label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+      padding: 4px 0;
     }
-
+    #layer-controls label:hover {
+      background: #f5f5f5;
+    }
+    #layer-controls input[type="checkbox"] {
+      accent-color: #1976d2;
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+    }
+    #feature-filter h3, #filtered-results h3, #clicked-feature h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #1976d2;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #feature-filter label, #filtered-results label {
+      margin-bottom: 8px;
+      display: block;
+    }
+    #feature-filter input[type="number"] {
+      width: 60px;
+      padding: 4px 8px;
+      border: 1px solid #bdbdbd;
+      border-radius: 4px;
+      font-size: 15px;
+      margin-left: 6px;
+      background: #f9f9f9;
+      transition: border 0.2s;
+    }
+    #feature-filter input[type="number"]:focus {
+      border: 1.5px solid #1976d2;
+      outline: none;
+    }
+    #applyBuildingFilter {
+      margin-top: 10px;
+      background: #1976d2;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 18px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(25,118,210,0.08);
+      transition: background 0.2s;
+    }
+    #applyBuildingFilter:hover {
+      background: #1565c0;
+    }
     #results-list {
-      max-height: 300px;
+      max-height: 260px;
       overflow-y: auto;
       padding-right: 5px;
+      background: #f7f9fa;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      margin-top: 8px;
+      font-size: 14px;
     }
-
-    hr { margin: 15px 0; }
+    #clicked-info {
+      background: #f7f9fa;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      padding: 10px;
+      font-size: 14px;
+      margin-top: 8px;
+      min-height: 40px;
+    }
+    hr {
+      margin: 18px 0;
+      border: none;
+      border-top: 1px solid #e0e0e0;
+    }
+    #footer {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      height: 32px;
+      background: #263238;
+      color: #fff;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      letter-spacing: 0.5px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+    }
+    /* Scrollbar styling for sidebar */
+    #info-panel::-webkit-scrollbar, #results-list::-webkit-scrollbar {
+      width: 8px;
+      background: #f4f6f8;
+    }
+    #info-panel::-webkit-scrollbar-thumb, #results-list::-webkit-scrollbar-thumb {
+      background: #e0e0e0;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
+  <div id="header">
+    <img src="https://img.icons8.com/ios-filled/32/ffffff/globe-earth.png" alt="GIS" style="margin-right:12px;vertical-align:middle;">
+    Tax Calculation GIS Portal
+  </div>
   <div id="map"></div>
 
   <div id="layer-controls">
-    <label><input type="checkbox" data-layer="agri-land" checked> Agricultural Land</label><br>
-    <label><input type="checkbox" data-layer="water-features" checked> Stream / Canal</label><br>
-    <label><input type="checkbox" data-layer="parcels" checked> Parcels</label><br>
-    <label><input type="checkbox" data-layer="parcels-border" checked> Parcel Borders</label><br>
-    <label><input type="checkbox" data-layer="roads" checked> Roads</label><br>
-    <label><input type="checkbox" data-layer="buildings" checked> Buildings</label><br>
+    <strong style="color:#1976d2;font-size:15px;display:block;margin-bottom:10px;">
+      <img src="https://img.icons8.com/ios-filled/18/1976d2/layers.png" style="vertical-align:middle;margin-right:6px;">
+      Map Layers
+    </strong>
+    <label><input type="checkbox" data-layer="agri-land" checked> Agricultural Land</label>
+    <label><input type="checkbox" data-layer="water-features" checked> Stream / Canal</label>
+    <label><input type="checkbox" data-layer="parcels" checked> Parcels</label>
+    <label><input type="checkbox" data-layer="parcels-border" checked> Parcel Borders</label>
+    <label><input type="checkbox" data-layer="roads" checked> Roads</label>
+    <label><input type="checkbox" data-layer="buildings" checked> Buildings</label>
   </div>
 
   <div id="info-panel">
     <div id="feature-filter">
-      <h3>Filter Buildings</h3>
-      <label>Min Floors: <input type="number" id="filterMinFloors" value="0" style="width: 50px;"></label><br>
-      <label>Max Floors: <input type="number" id="filterMaxFloors" value="10" style="width: 50px;"></label><br>
+      <h3>
+        <img src="https://img.icons8.com/ios-filled/16/1976d2/filter.png" alt="Filter">
+        Filter Buildings
+      </h3>
+      <label>Min Floors: <input type="number" id="filterMinFloors" value="0"></label>
+      <label>Max Floors: <input type="number" id="filterMaxFloors" value="10"></label>
       <button id="applyBuildingFilter">Apply Filter</button>
     </div>
 
     <hr>
 
     <div id="filtered-results">
-      <h3>Matching Buildings</h3>
+      <h3>
+        <img src="https://img.icons8.com/ios-filled/16/1976d2/search.png" alt="Results">
+        Matching Buildings
+      </h3>
       <div id="results-list">Apply filter to see results.</div>
     </div>
 
     <hr>
 
     <div id="clicked-feature">
-      <h3>Clicked Feature Info</h3>
+      <h3>
+        <img src="https://img.icons8.com/ios-filled/16/1976d2/info.png" alt="Info">
+        Clicked Feature Info
+      </h3>
       <div id="clicked-info">Click a map feature to view details.</div>
     </div>
+  </div>
+
+  <div id="footer">
+    &copy; 2025 GIS Tax Calculation Portal | Powered by Mapbox
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.8.0/dist/proj4.js"></script>
