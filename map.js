@@ -109,7 +109,7 @@ function loadLayer(url, layerId, color, popupFn, fitToBounds = false, is3D = fal
       map.on('click', layerId, e => {
         const props = e.features[0].properties;
         const clickedInfo = document.getElementById('clicked-info');
-        clickedInfo.innerHTML = popupFn(props); // show other layer info in sidebar
+        clickedInfo.innerHTML = propsToTable(props);
       });
       
 
@@ -204,3 +204,18 @@ document.getElementById('applyBuildingFilter').addEventListener('click', () => {
     `).join('');
   }
 });
+
+function propsToTable(props) {
+  return `
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tbody>
+        ${Object.entries(props).map(([key, value]) => `
+          <tr>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;font-weight:500;color:#1976d2;">${key}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;">${value ?? ''}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
